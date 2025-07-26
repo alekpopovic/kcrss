@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: secret-injector-controller
+  namespace: secret-injector-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: secret-injector-controller
+  template:
+    metadata:
+      labels:
+        app: secret-injector-controller
+    spec:
+      serviceAccountName: secret-injector-controller
+      containers:
+      - name: controller
+        image: secret-injector-controller:latest
+        ports:
+        - containerPort: 8080
+          name: metrics
+        - containerPort: 9443
+          name: webhook
+        env:
+        - name: METRICS_ADDR
+          value: ":8080"
+        - name: ENABLE_LEADER_ELECTION
+          value: "true"
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 65532
+          capabilities:
+            drop:
+            - ALL
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8081
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: 8081
+          initialDelaySeconds: 5
+          periodSeconds: 10
